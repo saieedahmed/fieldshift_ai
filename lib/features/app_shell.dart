@@ -13,6 +13,7 @@ import 'living_farm/living_farm_page.dart';
 import 'notifications/notifications_page.dart';
 import 'settings/settings_page.dart';
 import 'smart_irrigation/irrigation_page.dart';
+import 'team/team_page.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({
@@ -161,6 +162,15 @@ class _AppShellState extends State<AppShell> {
           ],
         ),
         actions: [
+          IconButton(
+            tooltip: strings.text('meetTheTeam'),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => const TeamPage(),
+              ),
+            ),
+            icon: const Icon(Icons.people_outline_rounded),
+          ),
           IconButton(
             tooltip: strings.text('notifications'),
             onPressed: () => Navigator.of(context).push(

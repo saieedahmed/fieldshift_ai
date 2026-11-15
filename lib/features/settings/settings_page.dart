@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/models/farm_data.dart';
+import '../team/team_page.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({
@@ -126,6 +127,22 @@ class SettingsPage extends StatelessWidget {
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: AppTheme.mutedInk,
                 height: 1.4,
+              ),
+            ),
+            const Divider(height: 25),
+            OutlinedButton.icon(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const TeamPage(),
+                ),
+              ),
+              icon: const Icon(Icons.people_alt_outlined),
+              label: Text(strings.text('meetTheTeam')),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size.fromHeight(50),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
               ),
             ),
           ],

@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/models/farm_data.dart';
+import '../../data/models/nasa_observation.dart';
 import '../../data/repositories/agricultural_advisor_service.dart';
+import '../../data/repositories/nasa_power_service.dart';
 import '../../shared/widgets/landscape_widgets.dart';
 
 class AdvisorPage extends StatefulWidget {
@@ -19,7 +21,9 @@ class AdvisorPage extends StatefulWidget {
 class _AdvisorPageState extends State<AdvisorPage> {
   final _questionController = TextEditingController();
   final _advisorService = AgriculturalAdvisorService();
+  final _nasaService = NasaPowerService();
   final List<_AdvisorMessage> _messages = [];
+  NasaDailyClimate? _nasaClimate;
   bool _showWhy = false;
   bool _showSecondWhy = false;
   bool _isLoading = false;
@@ -29,9 +33,39 @@ class _AdvisorPageState extends State<AdvisorPage> {
   List<Map<String, String>> _lastHistory = const [];
 
   @override
+  void initState() {
+    super.initState();
+    _loadClimateData();
+  }
+
+  @override
+  void didUpdateWidget(AdvisorPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.farm.location.latitude != widget.farm.location.latitude ||
+        oldWidget.farm.location.longitude != widget.farm.location.longitude) {
+      _loadClimateData();
+    }
+  }
+
+  Future<void> _loadClimateData() async {
+    try {
+      final climate = await _nasaService.fetchDailyClimate(
+        latitude: widget.farm.location.latitude,
+        longitude: widget.farm.location.longitude,
+      );
+      if (mounted) {
+        setState(() => _nasaClimate = climate);
+      }
+    } catch (e) {
+      debugPrint('AdvisorPage: NASA climate fetch error: $e');
+    }
+  }
+
+  @override
   void dispose() {
     _questionController.dispose();
     _advisorService.close();
+    _nasaService.close();
     super.dispose();
   }
 
@@ -64,6 +98,7 @@ class _AdvisorPageState extends State<AdvisorPage> {
           isLoading: _isLoading,
           errorMessage: _errorMessage,
           isConfigurationError: _isConfigurationError,
+          hasNasaClimate: _nasaClimate != null && _nasaClimate!.hasValidData,
           onSend: _sendMessage,
           onRetry: _retry,
         ),
@@ -138,6 +173,7 @@ class _AdvisorPageState extends State<AdvisorPage> {
         languageCode: AppLocalizations.of(context).isArabic ? 'ar' : 'en',
         farm: widget.farm,
         history: history,
+        nasaClimate: _nasaClimate,
       );
       if (!mounted) return;
       setState(
@@ -150,6 +186,13 @@ class _AdvisorPageState extends State<AdvisorPage> {
         _errorMessage = AppLocalizations.of(
           context,
         ).text('advisorNotConfigured');
+      });
+    } on AdvisorServiceException catch (error) {
+      debugPrint('Agricultural advisor service error: $error');
+      if (!mounted) return;
+      setState(() {
+        _isConfigurationError = false;
+        _errorMessage = error.message;
       });
     } catch (error) {
       debugPrint('Agricultural advisor request failed: $error');
@@ -181,6 +224,7 @@ class _ConversationCard extends StatelessWidget {
     required this.isConfigurationError,
     required this.onSend,
     required this.onRetry,
+    this.hasNasaClimate = false,
   });
 
   final TextEditingController controller;
@@ -189,6 +233,7 @@ class _ConversationCard extends StatelessWidget {
   final bool isLoading;
   final String? errorMessage;
   final bool isConfigurationError;
+  final bool hasNasaClimate;
   final VoidCallback onSend;
   final VoidCallback onRetry;
 
@@ -215,6 +260,31 @@ class _ConversationCard extends StatelessWidget {
                   style: const TextStyle(fontWeight: FontWeight.w800),
                 ),
               ),
+              if (hasNasaClimate) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppTheme.paleSage,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.public, size: 12, color: AppTheme.forest),
+                      SizedBox(width: 4),
+                      Text(
+                        'NASA POWER',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.forest,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 6),
+              ],
               const DemoBadge(),
             ],
           ),
